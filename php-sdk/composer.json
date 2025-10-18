@@ -1,0 +1,86 @@
+{
+    "name": "redis/workflow-sdk",
+    "description": "Redis-backed workflow SDK for PHP applications with Laravel and Symfony integrations.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Redis Workflow Maintainers",
+            "email": "oss@example.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "ext-ffi": "*",
+        "ext-redis": "*",
+        "illuminate/support": "^9.0|^10.0|^11.0|^12.0",
+        "illuminate/console": "^9.0|^10.0|^11.0|^12.0",
+        "symfony/dependency-injection": "^6.0|^7.0",
+        "symfony/config": "^6.0|^7.0",
+        "symfony/http-kernel": "^6.0|^7.0",
+        "symfony/console": "^6.0|^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0",
+        "pestphp/pest": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Redis\\Workflow\\": "src/Workflow/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/workflow"
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Redis\\Workflow\\Laravel\\WorkflowServiceProvider"
+            ],
+            "aliases": {
+                "WorkflowClient": "Redis\\Workflow\\Laravel\\Facades\\WorkflowClient"
+            }
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "Redis\\Workflow\\Composer\\PythonVersionCheck::handle"
+        ],
+        "post-update-cmd": [
+            "Redis\\Workflow\\Composer\\PythonVersionCheck::handle"
+        ],
+        "test": [
+            "@pest"
+        ],
+        "pest": "vendor/bin/pest"
+    },
+    "scripts-descriptions": {
+        "pest": "Run the Pest test suite shipped with the Redis workflow SDK.",
+        "test": "Alias for pest"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "suggest": {
+        "illuminate/redis": "Use Laravel's Redis connection manager for advanced setups.",
+        "symfony/framework-bundle": "Auto-register the bundle in full Symfony applications."
+    },
+    "archive": {
+        "exclude": [
+            "../orchestrator/tests",
+            "../tests/python",
+            "tests/python",
+            "tests/Fixtures/*.py"
+        ]
+    }
+}
