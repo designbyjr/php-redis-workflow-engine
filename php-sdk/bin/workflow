@@ -1,0 +1,64 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Redis;
+use Redis\Workflow\Examples\ExampleWorkflow;
+use Redis\Workflow\WorkflowClient;
+
+require __DIR__.'/../vendor/autoload.php';
+
+$envFiles = [
+    dirname(__DIR__, 2).'/.env.workflow',
+    dirname(__DIR__).'/../.env.workflow',
+    dirname(__DIR__).'/.env.workflow',
+];
+
+foreach ($envFiles as $envFile) {
+    if (!is_file($envFile)) {
+        continue;
+    }
+
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+    foreach ($lines as $line) {
+        if (str_starts_with($line, '#')) {
+            continue;
+        }
+        [$key, $value] = array_pad(explode('=', $line, 2), 2, '');
+        if ($key === '') {
+            continue;
+        }
+        $_ENV[$key] = $value;
+        putenv(sprintf('%s=%s', $key, $value));
+    }
+    break;
+}
+
+$options = getopt('', ['customer::', 'stream::']);
+$customer = $options['customer'] ?? 'cli-customer';
+$stream = $options['stream']
+    ?? ($_ENV['WORKFLOW_REDIS_STREAM'] ?? getenv('WORKFLOW_REDIS_STREAM') ?: 'workflow:stream');
+
+$redis = new Redis();
+$host = $_ENV['REDIS_WORKFLOW_HOST'] ?? getenv('REDIS_WORKFLOW_HOST') ?: '127.0.0.1';
+$port = (int) ($_ENV['REDIS_WORKFLOW_PORT'] ?? getenv('REDIS_WORKFLOW_PORT') ?: 6379);
+$timeout = (float) ($_ENV['REDIS_WORKFLOW_TIMEOUT'] ?? getenv('REDIS_WORKFLOW_TIMEOUT') ?: 1.5);
+$redis->connect($host, $port, $timeout);
+
+$password = $_ENV['REDIS_WORKFLOW_PASSWORD'] ?? getenv('REDIS_WORKFLOW_PASSWORD');
+if (!empty($password)) {
+    $redis->auth($password);
+}
+
+$database = $_ENV['REDIS_WORKFLOW_DATABASE'] ?? getenv('REDIS_WORKFLOW_DATABASE');
+if (!empty($database)) {
+    $redis->select((int) $database);
+}
+
+$client = new WorkflowClient($redis, (string) $stream);
+$workflow = new ExampleWorkflow($client);
+
+$result = $workflow->runExample(['customer_id' => (string) $customer]);
+
+fwrite(STDOUT, sprintf("Workflow dispatched. Result placeholder: %s\n", $result));

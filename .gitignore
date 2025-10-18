@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+.env.workflow
+php-sdk/vendor/
+php-sdk/.phpunit.result.cache
