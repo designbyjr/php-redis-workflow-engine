@@ -78,6 +78,18 @@ This repository assembles a Temporal-inspired workflow engine without gRPC or Ro
 
    The CLI re-validates the environment, starts the Redis worker in a background thread, and runs the FastAPI dashboard (default `http://127.0.0.1:8000`).
 
+   See [Python orchestration command reference](#python-orchestration-command-reference) for the rest of the subcommands and flags that are available when you need more granular control (for example, running the worker without the dashboard while developing PHP code).
+
+### FastAPI dashboard overview
+
+The Python worker and dashboard share a `MetricsCollector` instance so real-time stats are exposed through a lightweight JSON API. Once `./scripts/run_stack.py` (or `python -m orchestrator.cli dashboard`) is running, visit:
+
+* `http://127.0.0.1:8000/metrics` – aggregated counts, latency samples, and worker health metadata suitable for Prometheus scraping.
+* `http://127.0.0.1:8000/actions/recent` – the 50 most recent workflow actions returned as JSON objects, including duration and retry metadata.
+* `http://127.0.0.1:8000/workflows/<workflow-id>` – chronological timeline for a single workflow identifier (returns `404` when no audit trail exists).
+
+The repository does **not** ship a compiled front-end (HTML/CSS/JS) for the dashboard; the FastAPI application is intentionally API-first so teams can embed the data into their own UI or observability stack. Contributors looking to add a modern web interface can mount static assets or a SPA framework under the same FastAPI app without changing the documented endpoints.
+
 4. **Install the PHP SDK**
 
    ```bash
@@ -110,6 +122,7 @@ This repository assembles a Temporal-inspired workflow engine without gRPC or Ro
 
    ```bash
    php vendor/bin/workflow --customer=signup-123
+   php vendor/bin/workflow --customer=vip-42 --stream=workflow:priority
    ```
 
 ## Laravel integration
@@ -133,6 +146,8 @@ This repository assembles a Temporal-inspired workflow engine without gRPC or Ro
    ```
 
 Laravel 12 apps automatically use the modern interaction style with `Laravel\Prompts`. Both versions share the same `workflow:env` signature but render feedback using their respective console UX.
+
+Laravel 12’s `workflow:run` command also accepts a `--customer=` option for non-interactive usage; the Laravel 11 signature expects the customer identifier as the first argument.
 
 ## Symfony integration
 
@@ -160,6 +175,21 @@ Laravel 12 apps automatically use the modern interaction style with `Laravel\Pro
    php bin/console redis-workflow:env --project=./
    php bin/console redis-workflow:run signup-123
    ```
+
+Both Symfony commands honour the optional `--project=` flag so you can point them at an alternate application root when synchronising configuration from a monorepo checkout.
+
+## Python orchestration command reference
+
+The helper module `python -m orchestrator.cli` powers the orchestration workflow. In addition to the quick-start commands above, the following subcommands are available:
+
+| Command | Description |
+| --- | --- |
+| `python -m orchestrator.cli env [--framework-path=/path] [--env-file=path]` | Ensures `.env.workflow` exists and optionally propagates keys into Laravel/Symfony projects. Multiple `--framework-path` flags can be supplied. |
+| `python -m orchestrator.cli worker [--env-file=path]` | Runs only the Redis worker. Useful when pairing with an existing dashboard deployment. |
+| `python -m orchestrator.cli dashboard [--reload] [--env-file=path]` | Launches the FastAPI dashboard without starting the worker. |
+| `python -m orchestrator.cli stack [--reload] [--framework-path=/path] [--env-file=path]` | Starts the worker and dashboard together while re-validating the environment. |
+
+All subcommands load `.env.workflow` by default; use `--env-file` to target a different shared environment file. When `--framework-path` values are provided, the environment manager updates `.env`, `.env.local`, and `.env.example` files inside those projects with any missing workflow keys.
 
 ## PHP SDK API reference & examples
 
